@@ -244,22 +244,30 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align, p_cigar_op_z
 
 
 def expectation_maximization(log_p_rgs, freq):
-    """One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
-    probabilities in log_p_rgs.
+    """
+    One iteration of the EM algorithm. Updates the relative abundance
+    estimation in f based on probabilities in log_p_rgs.
 
-    In each iteration, P(s|r), the probabilities of a read given a sequence, is calculated according
-    to the current frequency vector. First, L(r|s) * f(s) is calculated, then a fixed multiplier, C,
-    is calculated for each read. The fixed multiplier is then multiplied by L(r|s)*f(s),
-    L(r|s) * f(s) * c. Then sum(L(r|s) * f(s) * c) for each sequence is calculated.
-    Then (L(r|s) * f(s) * c) / (sum(L(r|s) * f(s) * c) for each sequence), is calculated.
-    All calculations are done in log space. The frequency vector is then recalculated using the
-    P(s|r) values, and the total log likelihood is updated.
+    In each iteration, P(s|r), the probabilities of a read given a sequence, is
+    calculated according to the current frequency vector.
+
+    - First, L(r|s) * f(s) is calculated, then a fixed multiplier, C, is
+      calculated for each read.
+    - The fixed multiplier is then multiplied by L(r|s)*f(s), L(r|s) * f(s) * c.
+    - Then sum(L(r|s) * f(s) * c) for each sequence is calculated.
+    - Then (L(r|s) * f(s) * c) / (sum(L(r|s) * f(s) * c) for each sequence), is
+      calculated.
+
+    All calculations are done in log space. The frequency vector is then
+    recalculated using the P(s|r) values, and the total log likelihood is
+    updated.
 
     log_p_rgs({str:(int, float)}): dict[query_name]=(ref_tax_id, log(L(query_name|ref_tax_id)))
-    freq{int:float}: dict[species_tax_id]:likelihood species is present in sample
-    returns: f {int:float}: dict[species_tax_id]:updated likelihood species is present in sample
-    total_log_likelihood (float): log likelihood updated f is accurate
-    p_sgr {str: {int:float}}: probability of a read given the sequence
+    freq{int:float}: dict[species_tax_id]: Likelihood that a species is present in the sample
+    returns:
+        f {int:float}: dict[species_tax_id]:updated likelihood species is present in sample
+        total_log_likelihood (float): log likelihood updated f is accurate
+        p_sgr {str: {int:float}}: probability of a read given the sequence
     """
 
     p_sgr_flat = {}
@@ -292,9 +300,11 @@ def expectation_maximization(log_p_rgs, freq):
 
 
 def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_threshold):
-    """Full expectation maximization algorithm for alignments in log_L_rgs dict.
-    Calls the expectation_maximization function during each iteration of the algorithm.
-    Stops iterations once the log likelihood is calculated to have increased less than threshold.
+    """
+    Full expectation maximization algorithm for alignments in log_L_rgs dict.
+    Calls the expectation_maximization function during each iteration of the
+    algorithm.  Stops iterations once the log likelihood is calculated to have
+    increased less than threshold.
 
     log_p_rgs{[str,int]:float}: dict[(query_name,ref_tax_id)]=log(L(query_name|ref_tax_id))
     db_ids(list(int)): list of each unique species taxonomy id present in database
