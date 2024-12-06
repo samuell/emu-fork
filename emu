@@ -697,8 +697,8 @@ if __name__ == "__main__":
         'input_file', type=str, nargs='+',
         help='filepath to input nt sequence file')
     abundance_parser.add_argument(
-        '--type', '-x', choices=['map-ont', 'map-pb', 'sr'], default='map-ont',
-        help='short-read: sr, Pac-Bio:map-pb, ONT:map-ont [map-ont]')
+        '--type', '-x', choices=['map-ont', 'map-pb', 'sr', 'lr:hq', 'map-hifi', 'splice:hq'], default='map-ont',
+        help='short-read: sr, Pac-Bio:map-pb, ONT:map-ont, ... [map-ont]')
     abundance_parser.add_argument(
         '--min-abundance', '-a', type=float, default=0.0001,
         help='min species abundance in results [0.0001]')
