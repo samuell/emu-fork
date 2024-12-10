@@ -427,17 +427,25 @@ def generate_alignments(in_file_list, out_basename, database):
     sam_align_file = "{}_emu_alignments.sam".format(out_basename)
     db_sequence_file = os.path.join(database, 'species_taxid.fasta')
 
-    # force minimap2 to consider the forward transcript strand only
+    cmd = (
+        f"minimap2 "
+        f"-ax {args.type} "
+        f"-t {args.threads} "
+        f"-N {args.N} "
+        "-p .9 "
+    )
     if args.mm2_forward_only:
-        subprocess.check_output("minimap2 -ax {} -t {} -N {} -p .9 -u f -K {} {} {} -o {}".
-                                format(args.type, args.threads, args.N, args.K,
-                                    db_sequence_file, input_file, sam_align_file),
-                                shell=True)
-    else:
-        subprocess.check_output("minimap2 -ax {} -t {} -N {} -p .9 -K {} {} {} -o {}".
-                                format(args.type, args.threads, args.N, args.K,
-                                    db_sequence_file, input_file, sam_align_file),
-                                shell=True)
+        # force minimap2 to consider the forward transcript strand only
+        cmd += "-u f "
+    cmd += (
+        f"-K {args.K} "
+        f"{db_sequence_file} "
+        f"{input_file} "
+        f"-o {sam_align_file}"
+    )
+
+    print(f"Executing command: {cmd} ...")
+    subprocess.check_output(cmd, shell=True)
 
     return sam_align_file
 
