@@ -433,6 +433,7 @@ def generate_alignments(in_file_list, out_basename, database):
         f"-t {args.threads} "
         f"-N {args.N} "
         "-p .9 "
+        "--cs "
     )
     if args.mm2_forward_only:
         # force minimap2 to consider the forward transcript strand only
