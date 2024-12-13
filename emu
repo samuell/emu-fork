@@ -114,7 +114,7 @@ def get_cigar_op_log_probabilities(sam_path):
     # add alignment lengths and adjust existing alignment lengths in dict if necessary
     for alignment in sam_pysam.fetch():
         align_len = get_align_len(alignment)
-        if align_len not in dict_longest_align:
+        if alignment.query_name not in dict_longest_align:
             dict_longest_align[alignment.query_name] = align_len
         if not alignment.is_secondary and not alignment.is_supplementary \
                 and alignment.reference_name:
