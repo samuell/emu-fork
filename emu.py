@@ -866,16 +866,25 @@ if __name__ == "__main__":
 
         # perform EM algorithm & generate output
         SAM_FILE = generate_alignments(args.input_file, out_basepath, args.db)
+
         log_prob_cigar_op, locs_p_cigar_zero, longest_align_dict = \
             get_cigar_op_log_probabilities(SAM_FILE)
+
         log_prob_rgs, counts_unassigned, counts_assigned = log_prob_rgs_dict(
             SAM_FILE, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero)
+
         f_full, f_set_thresh, read_dist = expectation_maximization_iterations(log_prob_rgs,
                                                                    db_species_tids,
                                                                    .01, args.min_abundance)
-        freq_to_lineage_df(f_full, "{}_rel-abundance".format(out_basepath), df_taxonomy,
-                           counts_assigned, counts_unassigned, args.keep_counts)
 
+        freq_to_lineage_df(
+                f_full,
+                f"{out_basepath}_rel-abundance",
+                df_taxonomy,
+                counts_assigned,
+                counts_unassigned,
+                args.keep_counts
+        )
 
         # output read assignment distributions as a tsv
         if args.keep_read_assignments:
