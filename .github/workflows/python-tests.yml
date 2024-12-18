@@ -39,12 +39,12 @@ jobs:
       run: |
         micromamba install pytest
         pytest
-    - name: Run example: full length
+    - name: "Run example: full length"
       run: |
         python emu abundance example/full_length.fa
-    - name: Run example: short-read fwd+rev
+    - name: "Run example: short-read fwd+rev"
       run: |
         python emu abundance --type sr example/short_read_f.fq example/short_read_r.fq
-    - name: Run example: short-read fwd only
+    - name: "Run example: short-read fwd only"
       run:
         python emu abundance --type sr example/short_read_f.fq
