@@ -1,0 +1,50 @@
+name: Python Package using Conda
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-20.04
+    strategy:
+      max-parallel: 5
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.6.15
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.6.15'
+    - name: Create conda/mamba environment using micromamba
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: environment.yml
+        cache-downloads: true
+    - name: Add micromamba to system path                                                                                                                                                                                                                         
+      run: |                                                                                                                                                                                                                                                 
+        # $CONDA is an environment variable pointing to the root of the miniconda directory                                                                                                                                                                  
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Set EMU_DATABASE env variable
+      run: echo "EMU_DATABASE_DIR=./emu_database" >> $GITHUB_ENV
+    - name: Lint with flake8
+      run: |
+        micromamba install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        micromamba install pytest
+        pytest
+    - name: "Run example: full length"
+      run: |
+        python emu abundance example/full_length.fa
+    - name: "Run example: short-read fwd+rev"
+      run: |
+        python emu abundance --type sr example/short_read_f.fq example/short_read_r.fq
+    - name: "Run example: short-read fwd only"
+      run:
+        python emu abundance --type sr example/short_read_f.fq
