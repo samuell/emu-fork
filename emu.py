@@ -382,7 +382,7 @@ def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_thr
             return freq_full, freq_set_thresh, p_sgr
 
         #output current estimation
-        #freq_to_lineage_df(freq, f"{out_file}_{counter}", df_nodes, df_names)
+        #freq_to_lineage_df(freq, f"{out_basepath}_{counter}", df_nodes, df_names)
         counter += 1
 
 
@@ -862,10 +862,10 @@ if __name__ == "__main__":
         if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
 
-        out_file = create_outfile_path(args.output_dir, args.output_basename, args.input_file)
+        out_basepath = create_outfile_path(args.output_dir, args.output_basename, args.input_file)
 
         # perform EM algorithm & generate output
-        SAM_FILE = generate_alignments(args.input_file, out_file, args.db)
+        SAM_FILE = generate_alignments(args.input_file, out_basepath, args.db)
         log_prob_cigar_op, locs_p_cigar_zero, longest_align_dict = \
             get_cigar_op_log_probabilities(SAM_FILE)
         log_prob_rgs, counts_unassigned, counts_assigned = log_prob_rgs_dict(
@@ -873,19 +873,19 @@ if __name__ == "__main__":
         f_full, f_set_thresh, read_dist = expectation_maximization_iterations(log_prob_rgs,
                                                                    db_species_tids,
                                                                    .01, args.min_abundance)
-        freq_to_lineage_df(f_full, "{}_rel-abundance".format(out_file), df_taxonomy,
+        freq_to_lineage_df(f_full, "{}_rel-abundance".format(out_basepath), df_taxonomy,
                            counts_assigned, counts_unassigned, args.keep_counts)
 
 
         # output read assignment distributions as a tsv
         if args.keep_read_assignments:
-            output_read_assignments(read_dist, "{}_read-assignment-distributions".format(out_file))
+            output_read_assignments(read_dist, "{}_read-assignment-distributions".format(out_basepath))
 
         # convert and save frequency to a tsv
         if f_set_thresh:
             freq_to_lineage_df(
                 f_set_thresh,
-                "{}_rel-abundance-threshold-{}".format(out_file, args.min_abundance),
+                "{}_rel-abundance-threshold-{}".format(out_basepath, args.min_abundance),
                 df_taxonomy, counts_assigned, counts_unassigned, args.keep_counts)
 
         # gather input sequences that are unclassified according to minimap2
@@ -894,7 +894,7 @@ if __name__ == "__main__":
             INPUT_FILETYPE = "fasta"
             if ext in [".fastq", ".fq"]:
                 INPUT_FILETYPE = "fastq"
-            output_unclassified(SAM_FILE, "{}_unclassified".format(out_file), INPUT_FILETYPE)
+            output_unclassified(SAM_FILE, "{}_unclassified".format(out_basepath), INPUT_FILETYPE)
 
         # clean up extra file
         if not args.keep_files:
