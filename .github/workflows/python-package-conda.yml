@@ -20,9 +20,7 @@ jobs:
     - name: Create conda/mamba environment using micromamba
       uses: mamba-org/setup-micromamba@v1
       with:
-        activate-environment: custom-emu
         environment-file: environment.yml
-        auto-activate-base: false
         cache-downloads: true
     - name: Add micromamba to system path                                                                                                                                                                                                                         
       run: |                                                                                                                                                                                                                                                 
