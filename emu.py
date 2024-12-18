@@ -877,7 +877,7 @@ if __name__ == "__main__":
                                                                    db_species_tids,
                                                                    .01, args.min_abundance)
 
-        freq_to_lineage_df(
+        lineage_df = freq_to_lineage_df(
                 f_full,
                 f"{out_basepath}_rel-abundance",
                 df_taxonomy,
