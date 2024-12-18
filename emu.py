@@ -687,7 +687,7 @@ def combine_outputs(dir_path, rank, split_files=False, count_table=False):
     return df_combined_full
 
 
-def create_outfile_path(output_dir, output_basename, input_file):
+def create_output_basepath(output_dir, output_basename, input_file):
     if type(input_file) is list:
         input_paths = "-".join([Path(input_file).stem for input_file in input_file])
     else:
@@ -807,7 +807,7 @@ if __name__ == "__main__":
                                   index_col='tax_id', dtype=str)
         db_species_tids = df_taxonomy.index
 
-        out_file = create_outfile_path(args.output_dir, args.output_basename, args.input_file)
+        out_file = create_output_basepath(args.output_dir, args.output_basename, args.input_file)
 
         # perform EM algorithm & generate output
         SAM_FILE = generate_alignments(args.input_file, out_file, args.db)
