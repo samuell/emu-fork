@@ -1126,10 +1126,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if is_sam_file(args.input_file[0]):
-        args.keep_files = True
-
     if args.subparser_name == "abundance":
+        if is_sam_file(args.input_file[0]):
+            args.keep_files = True
+
         # check input file is fasta/q or sam alignment file
         # validate_input(args.input_file[0])
         # convert taxonomy files to dataframes
