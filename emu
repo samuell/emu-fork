@@ -12,12 +12,13 @@ import subprocess
 from sys import stdout
 from operator import add, mul
 from pathlib import Path
+from typing import List, Dict
 
 import math
 import pysam
 import numpy as np
 import pandas as pd
-from flatten_dict import unflatten
+from flatten_dict import unflatten # type: ignore
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -96,13 +97,14 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
 
 
 def get_cigar_op_log_probabilities(sam_path):
-    """P(align_type) for each type in CIGAR_OPS by counting how often the corresponding
-            operations occur in the primary alignments and by normalizing over the total
-            sum of operations.
+    """
+    P(align_type) for each type in CIGAR_OPS by counting how often the
+    corresponding operations occur in the primary alignments and by normalizing
+    over the total sum of operations.
 
-        sam_path(str): path to sam file of interest
-        return: log probabilities (list(float)) for each cigar operation defined in CIGAR_OPS,
-                where p > 0
+    sam_path(str): path to sam file of interest
+    return: log probabilities (list(float)) for each cigar operation defined in CIGAR_OPS,
+            where p > 0
             zero_locs (list(int)): list of indices (int) where probability == 0
             dict_longest_align (dict[str]:(int)): dict of max alignment length
                 for each query read
@@ -229,7 +231,8 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align, p_cigar_op_z
 
 
 def expectation_maximization(log_p_rgs, freq):
-    """One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
+    """
+    One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
     probabilities in log_p_rgs.
 
     In each iteration, P(s|r), the probabilities of a read given a sequence, is calculated according
@@ -242,6 +245,7 @@ def expectation_maximization(log_p_rgs, freq):
 
     log_p_rgs({str:(int, float)}): dict[query_name]=(ref_tax_id, log(L(query_name|ref_tax_id)))
     freq{int:float}: dict[species_tax_id]:likelihood species is present in sample
+
     returns: f {int:float}: dict[species_tax_id]:updated likelihood species is present in sample
     total_log_likelihood (float): log likelihood updated f is accurate
     p_sgr {str: {int:float}}: probability of a read given the sequence
@@ -331,7 +335,7 @@ def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_thr
             return freq_full, freq_set_thresh, p_sgr
 
         #output current estimation
-        #freq_to_lineage_df(freq, f"{out_file}_{counter}", df_nodes, df_names)
+        #freq_to_lineage_df(freq, f"{out_basepath}_{counter}", df_nodes, df_names)
         counter += 1
 
 
@@ -391,34 +395,99 @@ def freq_to_lineage_df(freq, tsv_output_path, taxonomy_df, mapped_count,
     return results_df
 
 
-def generate_alignments(in_file_list, out_basename, database):
-    """ Generate .sam alignment file
+def create_minimap2_command(
+            in_file_list,
+            database,
+            preset,
+            num_threads,
+            max_sec_alignments,
+            minibatch_size,
+            mm2_fwd_only,
+            output_file):
 
-        in_file_list(list(str)): list of path(s) to input sequences
-        out_basename(str): path and basename for output files
-    """
-    #indicate filepath and create file
-    input_file = " ".join(in_file_list)
-    filetype = pathlib.PurePath(args.input_file[0]).suffix
-    if filetype == '.sam':
-        args.keep_files = True
-        return input_file
-    sam_align_file = "{}_emu_alignments.sam".format(out_basename)
     db_sequence_file = os.path.join(database, 'species_taxid.fasta')
 
-    # force minimap2 to consider the forward transcript strand only
-    if args.mm2_forward_only:
-        subprocess.check_output("minimap2 -ax {} -t {} -N {} -p .9 -u f -K {} {} {} -o {}".
-                                format(args.type, args.threads, args.N, args.K,
-                                    db_sequence_file, input_file, sam_align_file),
-                                shell=True)
-    else:
-        subprocess.check_output("minimap2 -ax {} -t {} -N {} -p .9 -K {} {} {} -o {}".
-                                format(args.type, args.threads, args.N, args.K,
-                                    db_sequence_file, input_file, sam_align_file),
-                                shell=True)
+    in_files = " ".join(in_file_list)
 
-    return sam_align_file
+    # whether to force minimap2 to consider the forward transcript strand only
+    optional_args = ""
+    if mm2_fwd_only:
+        optional_args = "-u f "
+
+    minimap2_command = (
+            f"minimap2 "
+            f"-ax {preset} "
+            f"-t {num_threads} "
+            f"-N {max_sec_alignments} "
+            f"-p .9 " # min secondary-to-primary score ratio
+            f"{optional_args}"
+            f"-K {minibatch_size} "
+            f"{db_sequence_file} "
+            f"{in_files} "
+            f"-o {output_file}"
+    )
+
+    return minimap2_command
+
+
+def is_sam_file(file_path):
+    return pathlib.PurePath(file_path).suffix == ".sam"
+
+
+def is_fastq_file(file_path):
+    suffix = pathlib.PurePath(file_path).suffix
+    return suffix in [".fastq", ".fq"]
+
+
+def generate_alignments(in_file_list: List[str], out_basename: str, database: str, mm2_preset, \
+        num_threads, max_sec_alignments, minibatch_size, mm2_fwd_only):
+    """
+    Generate .sam alignment file
+
+    Parameters
+    ----------
+    in_file_list : list of str
+        List of path(s) to input sequences
+    out_basename : str
+        Path and basename for output files
+    database : str
+        Folder where the database is located
+    mm2_preset : str
+        Minimap2 preset (default: map-ont). See minimap2 docs for options.
+    num_threads : int
+        Number of threads
+    max_sec_alignments: str
+        The -N flag to minimap2: "retain at most INT secondary alignments"
+    minibatch_size: str
+        The -K flag to minimap2: "minibatch size for mapping"
+    mm2_fwd_only: bool
+        minimap2 option "-u f" to only match on the forward (transcript) strand
+
+    Returns
+    -------
+    output_file : str
+        Path to output file in SAM format (.sam)
+    """
+
+    if is_sam_file(in_file_list[0]):
+        return in_file_list[0]
+
+    output_file = f"{out_basename}_emu_alignments.sam"
+
+    minimap2_command = create_minimap2_command(
+            in_file_list,
+            database,
+            mm2_preset,
+            num_threads,
+            max_sec_alignments,
+            minibatch_size,
+            mm2_fwd_only,
+            output_file
+    )
+
+    subprocess.check_output(minimap2_command, shell=True)
+
+    return output_file
 
 
 def output_read_assignments(p_sgr, tsv_output_path):
@@ -799,6 +868,9 @@ if __name__ == "__main__":
         help='counts rather than abundances in output table')
     args = parser.parse_args()
 
+    if is_sam_file(args.input_file[0]):
+        args.keep_files = True
+
     if args.subparser_name == "abundance":
         # check input file is fasta/q or sam alignment file
         # validate_input(args.input_file[0])
@@ -811,56 +883,87 @@ if __name__ == "__main__":
                                   index_col='tax_id', dtype=str)
         db_species_tids = df_taxonomy.index
 
-        # set up output paths
+        # create output folder
         if not os.path.exists(args.output_dir):
             os.makedirs(args.output_dir)
 
-        out_file = create_output_basepath(args.output_dir, args.output_basename, args.input_file)
+        out_basepath = create_output_basepath(args.output_dir, args.output_basename, args.input_file)
 
-        # perform EM algorithm & generate output
-        SAM_FILE = generate_alignments(args.input_file, out_file, args.db)
-        log_prob_cigar_op, locs_p_cigar_zero, longest_align_dict = \
-            get_cigar_op_log_probabilities(SAM_FILE)
-        log_prob_rgs, set_unmapped, set_mapped = log_prob_rgs_dict(
-            SAM_FILE, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero)
-        f_full, f_set_thresh, read_dist = expectation_maximization_iterations(log_prob_rgs,
-                                                                   db_species_tids,
-                                                                   .01, args.min_abundance)
+        # execute EM algorithm & generate output
+        alignment_file = generate_alignments(
+                in_file_list=args.input_file,
+                out_basename=out_basepath,
+                database=args.db,
+                mm2_preset=args.type,
+                num_threads=args.threads,
+                max_sec_alignments=args.N,
+                minibatch_size=args.K,
+                mm2_fwd_only=args.mm2_forward_only)
+
+        (
+            log_prob_cigar_op,
+            locs_p_cigar_zero,
+            longest_align_dict
+        ) =  get_cigar_op_log_probabilities(alignment_file)
+
+        (
+            log_prob_rgs,
+            set_unmapped,
+            set_mapped
+        ) = log_prob_rgs_dict(
+            alignment_file,
+            log_prob_cigar_op,
+            longest_align_dict,
+            locs_p_cigar_zero
+        )
+
+        # run the main expectation maximization algorithm
+        (
+            f_full,
+            f_set_thresh,
+            read_dist
+        ) = expectation_maximization_iterations(
+                log_prob_rgs,
+                db_species_tids,
+                .01, args.min_abundance)
+
         classified_reads = {read_id for inner_dict in read_dist.values() for read_id in inner_dict}
         mapped_unclassified = set_mapped - classified_reads
         stdout.write(f"Unclassified mapped read count: {len(mapped_unclassified)}\n")
-        freq_to_lineage_df(f_full, "{}_rel-abundance".format(out_file), df_taxonomy,
+        freq_to_lineage_df(f_full, "{}_rel-abundance".format(out_basepath), df_taxonomy,
                            len(set_mapped), len(set_unmapped), len(mapped_unclassified),
                            args.keep_counts)
 
 
         # output read assignment distributions as a tsv
         if args.keep_read_assignments:
-            output_read_assignments(read_dist, "{}_read-assignment-distributions".format(out_file))
+            output_read_assignments(read_dist, "{}_read-assignment-distributions".format(out_basepath))
 
         # convert and save frequency to a tsv
         if f_set_thresh:
             freq_to_lineage_df(
                 f_set_thresh,
-                "{}_rel-abundance-threshold-{}".format(out_file, args.min_abundance),
+                "{}_rel-abundance-threshold-{}".format(out_basepath, args.min_abundance),
                 df_taxonomy, len(set_mapped), len(set_unmapped), len(mapped_unclassified),
                 args.keep_counts)
 
         # gather input sequences that are unmapped according to minimap2
         if args.output_unclassified:
-            ext = os.path.splitext(args.input_file[0])[-1]
             INPUT_FILETYPE = "fasta"
-            if ext in [".fastq", ".fq"]:
+            if is_fastq_file(args.input_file[0]):
                 INPUT_FILETYPE = "fastq"
-            output_sequences(args.input_file[0], "{}_unmapped".format(out_file), INPUT_FILETYPE,
+            output_sequences(args.input_file[0], "{}_unmapped".format(out_basepath), INPUT_FILETYPE,
                                                 set_unmapped)
-            output_sequences(args.input_file[0], "{}_unclassified_mapped".format(out_file),
+            output_sequences(args.input_file[0], "{}_unclassified_mapped".format(out_basepath),
                              INPUT_FILETYPE, mapped_unclassified)
 
-        # clean up extra file
-        if not args.keep_files:
-            if os.path.exists(SAM_FILE):
-                os.remove(SAM_FILE)
+        # handle intermediary .sam alignments file
+        keep_files = args.keep_files
+        if is_sam_file(args.input_file[0]):
+            keep_files = True
+        if not keep_files:
+            if os.path.exists(alignment_file):
+                os.remove(alignment_file)
 
 
     # create a custom database with ncbi taxonomy
