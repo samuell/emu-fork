@@ -1,4 +1,5 @@
 import os
+import pysam
 import pytest
 import sys
 
@@ -130,3 +131,25 @@ def test_generate_alignments():
     )
 
     assert got_alignment_file == sam_file
+
+
+def test_get_cigar_op_log_probabilities():
+    pass
+
+
+@pytest.mark.parametrize(
+    "cigar_string, expected_alignment_length",
+    [
+        ("2M", 2),
+        ("2M3I2M", 7),
+        ("2M4D2M", 8),
+        ("1M3X1M", 2)
+    ],
+)
+def test_get_alignment_len(cigar_string, expected_alignment_length):
+    mock_alignment = pysam.AlignedSegment()
+    mock_alignment.cigarstring = cigar_string
+
+    got_alignment_length = emu.get_align_len(mock_alignment)
+
+    assert got_alignment_length == expected_alignment_length
