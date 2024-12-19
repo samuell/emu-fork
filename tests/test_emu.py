@@ -140,11 +140,11 @@ def test_get_cigar_op_log_probabilities():
 @pytest.mark.parametrize(
     "cigar_string, expected_alignment_length",
     [
-        ("2M", 2),
+        ("2M1000X", 2),
         ("2M3I2M", 7),
         ("2M4D2M", 8),
-        ("1M3X1M", 2),
-        ("2S4M2S", 8)
+        ("10M1000X10M", 20),
+        ("2S4M2S", 8),
     ],
 )
 def test_get_align_len(cigar_string, expected_alignment_length):
@@ -154,3 +154,20 @@ def test_get_align_len(cigar_string, expected_alignment_length):
     got_alignment_length = emu.get_align_len(mock_alignment)
 
     assert got_alignment_length == expected_alignment_length
+
+
+@pytest.mark.parametrize(
+    "cigar_string, nm_tag, expected_align_stats",
+    [
+        ("1M2I3D4S5X", 2 + 3 + 4 + 5, [2, 3, 4, 9]),
+        ("3S1I1M2D", 1 + 2 + 3, [1, 2, 3, 3]),
+    ],
+)
+def test_get_align_stats(cigar_string, nm_tag, expected_align_stats):
+    mock_alignment = pysam.AlignedSegment()
+    mock_alignment.cigarstring = cigar_string
+    mock_alignment.set_tag("NM", nm_tag)
+
+    got_align_stats = emu.get_align_stats(mock_alignment)
+
+    assert got_align_stats == expected_align_stats
