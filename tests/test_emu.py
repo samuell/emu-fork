@@ -143,10 +143,11 @@ def test_get_cigar_op_log_probabilities():
         ("2M", 2),
         ("2M3I2M", 7),
         ("2M4D2M", 8),
-        ("1M3X1M", 2)
+        ("1M3X1M", 2),
+        ("2S4M2S", 8)
     ],
 )
-def test_get_alignment_len(cigar_string, expected_alignment_length):
+def test_get_align_len(cigar_string, expected_alignment_length):
     mock_alignment = pysam.AlignedSegment()
     mock_alignment.cigarstring = cigar_string
 
