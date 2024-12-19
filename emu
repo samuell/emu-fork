@@ -12,12 +12,13 @@ import subprocess
 from sys import stdout
 from operator import add, mul
 from pathlib import Path
+from typing import List, Dict
 
 import math
 import pysam
 import numpy as np
 import pandas as pd
-from flatten_dict import unflatten
+from flatten_dict import unflatten # type: ignore
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -96,13 +97,14 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
 
 
 def get_cigar_op_log_probabilities(sam_path):
-    """P(align_type) for each type in CIGAR_OPS by counting how often the corresponding
-            operations occur in the primary alignments and by normalizing over the total
-            sum of operations.
+    """
+    P(align_type) for each type in CIGAR_OPS by counting how often the
+    corresponding operations occur in the primary alignments and by normalizing
+    over the total sum of operations.
 
-        sam_path(str): path to sam file of interest
-        return: log probabilities (list(float)) for each cigar operation defined in CIGAR_OPS,
-                where p > 0
+    sam_path(str): path to sam file of interest
+    return: log probabilities (list(float)) for each cigar operation defined in CIGAR_OPS,
+            where p > 0
             zero_locs (list(int)): list of indices (int) where probability == 0
             dict_longest_align (dict[str]:(int)): dict of max alignment length
                 for each query read
@@ -229,7 +231,8 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align, p_cigar_op_z
 
 
 def expectation_maximization(log_p_rgs, freq):
-    """One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
+    """
+    One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
     probabilities in log_p_rgs.
 
     In each iteration, P(s|r), the probabilities of a read given a sequence, is calculated according
@@ -242,6 +245,7 @@ def expectation_maximization(log_p_rgs, freq):
 
     log_p_rgs({str:(int, float)}): dict[query_name]=(ref_tax_id, log(L(query_name|ref_tax_id)))
     freq{int:float}: dict[species_tax_id]:likelihood species is present in sample
+
     returns: f {int:float}: dict[species_tax_id]:updated likelihood species is present in sample
     total_log_likelihood (float): log likelihood updated f is accurate
     p_sgr {str: {int:float}}: probability of a read given the sequence
@@ -435,12 +439,23 @@ def is_fastq_file(file_path):
     return suffix in [".fastq", ".fq"]
 
 
-def generate_alignments(in_file_list, out_basename, database, mm2_preset, \
+def generate_alignments(in_file_list: List[str], out_basename: str, database: str, mm2_preset, \
         num_threads, max_sec_alignments, minibatch_size, mm2_fwd_only):
-    """ Generate .sam alignment file
+    """
+    Generate .sam alignment file
 
-        in_file_list(list(str)): list of path(s) to input sequences
-        out_basename(str): path and basename for output files
+    Parameters
+    ----------
+    in_file_list: list of str
+        list of path(s) to input sequences
+    out_basename:
+        path and basename for output files
+    database:
+
+    Returns
+    -------
+    output_file : str
+        path to output file in SAM format (.sam)
     """
 
     if is_sam_file(in_file_list[0]):
@@ -863,7 +878,7 @@ if __name__ == "__main__":
 
         out_basepath = create_output_basepath(args.output_dir, args.output_basename, args.input_file)
 
-        # perform EM algorithm & generate output
+        # execute EM algorithm & generate output
         alignment_file = generate_alignments(
                 in_file_list=args.input_file,
                 out_basename=out_basepath,
@@ -874,19 +889,33 @@ if __name__ == "__main__":
                 minibatch_size=args.K,
                 mm2_fwd_only=args.mm2_forward_only)
 
-        log_prob_cigar_op, locs_p_cigar_zero, longest_align_dict = \
-            get_cigar_op_log_probabilities(alignment_file)
+        (
+            log_prob_cigar_op,
+            locs_p_cigar_zero,
+            longest_align_dict
+        ) =  get_cigar_op_log_probabilities(alignment_file)
 
-        log_prob_rgs, set_unmapped, set_mapped = log_prob_rgs_dict(
+        (
+            log_prob_rgs,
+            set_unmapped,
+            set_mapped
+        ) = log_prob_rgs_dict(
             alignment_file,
             log_prob_cigar_op,
             longest_align_dict,
             locs_p_cigar_zero
         )
 
-        f_full, f_set_thresh, read_dist = expectation_maximization_iterations(log_prob_rgs,
-                                                                   db_species_tids,
-                                                                   .01, args.min_abundance)
+        # run the main expectation maximization algorithm
+        (
+            f_full,
+            f_set_thresh,
+            read_dist
+        ) = expectation_maximization_iterations(
+                log_prob_rgs,
+                db_species_tids,
+                .01, args.min_abundance)
+
         classified_reads = {read_id for inner_dict in read_dist.values() for read_id in inner_dict}
         mapped_unclassified = set_mapped - classified_reads
         stdout.write(f"Unclassified mapped read count: {len(mapped_unclassified)}\n")
