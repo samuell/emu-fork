@@ -84,7 +84,7 @@ def get_misalign_type_counts(alignment):
 
     Returns
     -------
-    align_type_counts : list of int
+    misalign_type_counts : list of int
         List of counts for each cigar operation defined in (I,D,S,X)
     """
     (
@@ -106,13 +106,13 @@ def get_misalign_type_counts(alignment):
     # so to calculate mismatches, we have to subtract the two other types.
     n_mismatches = nm_tag - n_insertions - n_deletions
 
-    align_type_counts = [
+    misalign_type_counts = [
         n_insertions,
         n_deletions,
         n_softclips,
         n_mismatches,
     ]
-    return align_type_counts
+    return misalign_type_counts
 
 
 def get_align_len(alignment):
@@ -174,7 +174,7 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
         SeqIO.write(filtered_sequences, out_seq_file, input_type)
 
 
-def get_cigar_op_log_probabilities(sam_path):
+def get_misalign_type_log_probabilities(sam_path):
     """
     Calculate P(align_type), probability for each alignment type, in cigar_ops
     by counting how often the corresponding operations occur in the primary
@@ -184,9 +184,6 @@ def get_cigar_op_log_probabilities(sam_path):
     ----------
     sam_path : str
         Path to sam file of interest
-    cigar_ops : list of int
-        List of the int values for CIGAR operations that should be included the
-        calculation of alignment types
 
     Returns
     -------
@@ -229,13 +226,14 @@ def get_cigar_op_log_probabilities(sam_path):
             del misalign_type_counts_acc[i]
 
     total_alignment_type_counts = sum(misalign_type_counts_acc)
-    log_probs_align_types = [
-        math.log(x)
-        for x in np.array(misalign_type_counts_acc) / total_alignment_type_counts
-    ]
+
+    misalign_type_probs = (
+        np.array(misalign_type_counts_acc) / total_alignment_type_counts
+    )
+    misalign_type_log_probs = [math.log(x) for x in misalign_type_probs]
 
     return (
-        log_probs_align_types,
+        misalign_type_log_probs,
         zero_locs,
         dict_longest_align,
     )
@@ -1173,7 +1171,7 @@ if __name__ == "__main__":
             log_prob_cigar_op,
             locs_p_cigar_zero,
             longest_align_dict,
-        ) = get_cigar_op_log_probabilities(alignment_file)
+        ) = get_misalign_type_log_probabilities(alignment_file)
 
         (log_prob_rgs, set_unmapped, set_mapped) = log_prob_rgs_dict(
             alignment_file, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero
