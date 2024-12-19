@@ -910,7 +910,7 @@ if __name__ == "__main__":
         # gather input sequences that are unmapped according to minimap2
         if args.output_unclassified:
             INPUT_FILETYPE = "fasta"
-            if is_fastq_file(in_file_list[0]):
+            if is_fastq_file(args.input_file[0]):
                 INPUT_FILETYPE = "fastq"
             output_sequences(args.input_file[0], "{}_unmapped".format(out_basepath), INPUT_FILETYPE,
                                                 set_unmapped)
