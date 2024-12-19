@@ -195,7 +195,7 @@ def get_misalign_type_log_probabilities(sam_path):
         Max alignment lengths for each query read
     """
     # For storing counts of I, D, S, X : insertions, deletions, soft-clips and mis-matches
-    misalign_type_counts_acc = [0, 0, 0, 0]
+    misalign_type_counts = [0, 0, 0, 0]
     dict_longest_align = {}
 
     # pylint: disable=maybe-no-member
@@ -215,20 +215,20 @@ def get_misalign_type_log_probabilities(sam_path):
             if align_len > dict_longest_align[alignment.query_name]:
                 dict_longest_align[alignment.query_name] = align_len
             # tally up the cigar stats
-            misalign_type_counts_acc = list(
-                map(add, misalign_type_counts_acc, get_misalign_type_counts(alignment))
+            misalign_type_counts = list(
+                map(add, misalign_type_counts, get_misalign_type_counts(alignment))
             )
 
     # check if any probabilities are 0, if so, remove
-    zero_locs = [i for i, e in enumerate(misalign_type_counts_acc) if e == 0]
+    zero_locs = [i for i, e in enumerate(misalign_type_counts) if e == 0]
     if zero_locs:
         for i in sorted(zero_locs, reverse=True):
-            del misalign_type_counts_acc[i]
+            del misalign_type_counts[i]
 
-    total_alignment_type_counts = sum(misalign_type_counts_acc)
+    total_alignment_type_counts = sum(misalign_type_counts)
 
     misalign_type_probs = (
-        np.array(misalign_type_counts_acc) / total_alignment_type_counts
+        np.array(misalign_type_counts) / total_alignment_type_counts
     )
     misalign_type_log_probs = [math.log(x) for x in misalign_type_probs]
 
