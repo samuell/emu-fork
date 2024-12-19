@@ -24,8 +24,34 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 
-# static global variables
-CIGAR_OPS = [1, 2, 4, 10]
+# Static global variables
+# =======================
+
+# CIGAR operations
+# ----------------------------
+# |M    |BAM_CMATCH    |0    |
+# |I    |BAM_CINS      |1    |
+# |D    |BAM_CDEL      |2    |
+# |N    |BAM_CREF_SKIP |3    |
+# |S    |BAM_CSOFT_CLIP|4    |
+# |H    |BAM_CHARD_CLIP|5    |
+# |P    |BAM_CPAD      |6    |
+# |=    |BAM_CEQUAL    |7    |
+# |X    |BAM_CDIFF     |8    |
+# |B    |BAM_CBACK     |9    |
+# |NM   |NM tag        |10   |
+# ----------------------------
+# Source:
+# https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_cigar_stats
+
+CIGAR_OP_MATCH = 0
+CIGAR_OP_INSERTION = 1
+CIGAR_OP_DELETION = 2
+CIGAR_OP_SOFTCLIP = 4
+CIGAR_NMTAG = 10
+
+CIGAR_OPS = [CIGAR_OP_INSERTION, CIGAR_OP_DELETION, CIGAR_OP_SOFTCLIP, CIGAR_NMTAG]
+
 TAXONOMY_RANKS = [
     "species",
     "genus",
@@ -40,6 +66,9 @@ RANKS_PRINTOUT = (
     ["tax_id"] + TAXONOMY_RANKS + ["subspecies", "species subgroup", "species group"]
 )
 RANKS_ORDER = ["tax_id"] + TAXONOMY_RANKS[:6] + TAXONOMY_RANKS[7:]
+
+# Main code
+# =========
 
 
 def validate_input(path):
@@ -95,8 +124,13 @@ def get_align_len(alignment):
     int
         Number of columns in alignment
     """
-    CIGAR_OPS_ALL = [0, 1, 2, 4]
-    return sum(alignment.get_cigar_stats()[0][cigar_op] for cigar_op in CIGAR_OPS_ALL)
+    cigar_ops_all = [
+        CIGAR_OP_MATCH,
+        CIGAR_OP_INSERTION,
+        CIGAR_OP_DELETION,
+        CIGAR_OP_SOFTCLIP,
+    ]
+    return sum(alignment.get_cigar_stats()[0][cigar_op] for cigar_op in cigar_ops_all)
 
 
 def output_sequences(in_path, seq_output_path, input_type, keep_ids):
