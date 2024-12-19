@@ -27,33 +27,6 @@ from Bio.SeqRecord import SeqRecord
 # Static global variables
 # =======================
 
-# CIGAR operations
-# ----------------------------
-# |M    |BAM_CMATCH    |0    |
-# |I    |BAM_CINS      |1    |
-# |D    |BAM_CDEL      |2    |
-# |N    |BAM_CREF_SKIP |3    |
-# |S    |BAM_CSOFT_CLIP|4    |
-# |H    |BAM_CHARD_CLIP|5    |
-# |P    |BAM_CPAD      |6    |
-# |=    |BAM_CEQUAL    |7    |
-# |X    |BAM_CDIFF     |8    |
-# |B    |BAM_CBACK     |9    |
-# |NM   |NM tag        |10   |
-# ----------------------------
-# Source:
-# https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_cigar_stats
-
-CIGAR_OP_MATCH = (
-    0  # Note: This one also includes mismatches in the older CIGAR standard
-)
-CIGAR_OP_INSERTION = 1
-CIGAR_OP_DELETION = 2
-CIGAR_OP_SOFTCLIP = 4
-CIGAR_NMTAG = 10
-
-CIGAR_OPS = [CIGAR_OP_INSERTION, CIGAR_OP_DELETION, CIGAR_OP_SOFTCLIP, CIGAR_NMTAG]
-
 TAXONOMY_RANKS = [
     "species",
     "genus",
@@ -100,7 +73,7 @@ def validate_input(path):
         raise TypeError("Input must be in desired format: fasta or fastq")
 
 
-def get_align_type_counts(alignment):
+def get_misalign_type_counts(alignment):
     """
     Retrieve list of inquired cigar stats (I,D,S,X) for alignment
 
@@ -156,14 +129,25 @@ def get_align_len(alignment):
     total_cols_in_alignment : int
         Number of columns in alignment
     """
-    cigar_ops_all = [
+    # CIGAR operations
+    # ----------------------------
+    # See this page for source:
+    # https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_cigar_stats
+    # Note: CIGAR_OP_MATCH also includes mismatches in the older CIGAR standard
+    # which is used here
+    CIGAR_OP_MATCH = 0
+    CIGAR_OP_INSERTION = 1
+    CIGAR_OP_DELETION = 2
+    CIGAR_OP_SOFTCLIP = 4
+    CIGAR_NMTAG = 10
+    CIGAR_OPS_ALL = [
         CIGAR_OP_MATCH,  # This one also includes mismatches in the older CIGAR standard
         CIGAR_OP_INSERTION,
         CIGAR_OP_DELETION,
         CIGAR_OP_SOFTCLIP,
     ]
     total_cols_in_alignment = sum(
-        alignment.get_cigar_stats()[0][cigar_op] for cigar_op in cigar_ops_all
+        alignment.get_cigar_stats()[0][op] for op in CIGAR_OPS_ALL
     )
     return total_cols_in_alignment
 
@@ -190,7 +174,7 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
         SeqIO.write(filtered_sequences, out_seq_file, input_type)
 
 
-def get_cigar_op_log_probabilities(sam_path, cigar_ops):
+def get_cigar_op_log_probabilities(sam_path):
     """
     Calculate P(align_type), probability for each alignment type, in cigar_ops
     by counting how often the corresponding operations occur in the primary
@@ -213,7 +197,8 @@ def get_cigar_op_log_probabilities(sam_path, cigar_ops):
     dict_longest_align : dict of str to int
         Max alignment lengths for each query read
     """
-    align_type_counts_acc = [0] * len(cigar_ops)
+    # For storing counts of I, D, S, X : insertions, deletions, soft-clips and mis-matches
+    misalign_type_counts_acc = [0, 0, 0, 0]
     dict_longest_align = {}
 
     # pylint: disable=maybe-no-member
@@ -233,23 +218,24 @@ def get_cigar_op_log_probabilities(sam_path, cigar_ops):
             if align_len > dict_longest_align[alignment.query_name]:
                 dict_longest_align[alignment.query_name] = align_len
             # tally up the cigar stats
-            align_type_counts_acc = list(
-                map(add, align_type_counts_acc, get_align_type_counts(alignment))
+            misalign_type_counts_acc = list(
+                map(add, misalign_type_counts_acc, get_align_type_counts(alignment))
             )
 
     # check if any probabilities are 0, if so, remove
-    zero_locs = [i for i, e in enumerate(align_type_counts_acc) if e == 0]
+    zero_locs = [i for i, e in enumerate(misalign_type_counts_acc) if e == 0]
     if zero_locs:
         for i in sorted(zero_locs, reverse=True):
-            del align_type_counts_acc[i]
+            del misalign_type_counts_acc[i]
 
-    total_alignment_type_counts = sum(align_type_counts_acc)
-    log_probs = [
-        math.log(x) for x in np.array(align_type_counts_acc) / total_alignment_type_counts
+    total_alignment_type_counts = sum(misalign_type_counts_acc)
+    log_probs_align_types = [
+        math.log(x)
+        for x in np.array(misalign_type_counts_acc) / total_alignment_type_counts
     ]
 
     return (
-        log_probs,
+        log_probs_align_types,
         zero_locs,
         dict_longest_align,
     )
@@ -304,7 +290,7 @@ def log_prob_rgs_dict(
         for alignment in sam_filename.fetch():
             align_len = get_align_len(alignment)
             if alignment.reference_name and align_len:
-                cigar_stats = get_align_type_counts(alignment)
+                cigar_stats = get_misalign_type_counts(alignment)
                 log_score, query_name, species_tid = compute_log_prob_rgs(
                     alignment,
                     cigar_stats,
@@ -332,7 +318,7 @@ def log_prob_rgs_dict(
         for alignment in sam_filename.fetch():
             align_len = get_align_len(alignment)
             if alignment.reference_name and align_len:
-                cigar_stats = get_align_type_counts(alignment)
+                cigar_stats = get_misalign_type_counts(alignment)
                 if sum(cigar_stats[x] for x in p_cigar_op_zero_locs) == 0:
                     for i in sorted(p_cigar_op_zero_locs, reverse=True):
                         del cigar_stats[i]
@@ -1187,7 +1173,7 @@ if __name__ == "__main__":
             log_prob_cigar_op,
             locs_p_cigar_zero,
             longest_align_dict,
-        ) = get_cigar_op_log_probabilities(alignment_file, CIGAR_OPS)
+        ) = get_cigar_op_log_probabilities(alignment_file)
 
         (log_prob_rgs, set_unmapped, set_mapped) = log_prob_rgs_dict(
             alignment_file, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero
