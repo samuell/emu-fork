@@ -113,17 +113,30 @@ def get_align_stats(alignment):
     list of int
         List of counts for each cigar operation defined in (I,D,S,X)
     """
-    cigar_stats = alignment.get_cigar_stats()[0]
-    n_mismatch = (
-        cigar_stats[CIGAR_NMTAG]
-        - cigar_stats[CIGAR_OP_INSERTION]
-        - cigar_stats[CIGAR_OP_DELETION]
-    )
+    (
+        _,  #  0
+        n_insertions,  #  1
+        n_deletions,  #  2
+        _,  #  3
+        n_softclips,  #  4
+        _,  #  5
+        _,  #  6
+        _,  #  7
+        _,  #  8
+        _,  #  9
+        nm_tag,  # 10
+    ) = alignment.get_cigar_stats()[0]
+
+    # The NM tag is defined by:
+    # NM = n_insertions + n_deletions + n_mismatches
+    # so to calculate mismatches, we have to subtract the two other types.
+    n_mismatches = nm_tag - n_insertions - n_deletions
+
     alignment_stats = [
-        cigar_stats[CIGAR_OP_INSERTION],
-        cigar_stats[CIGAR_OP_DELETION],
-        cigar_stats[CIGAR_OP_SOFTCLIP],
-        n_mismatch,
+        n_insertions,
+        n_deletions,
+        n_softclips,
+        n_mismatches,
     ]
     return alignment_stats
 
