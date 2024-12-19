@@ -163,11 +163,11 @@ def test_get_align_len(cigar_string, expected_alignment_length):
         ("3S1I1M2D", 1 + 2 + 3, [1, 2, 3, 3]),
     ],
 )
-def test_get_align_stats(cigar_string, nm_tag, expected_align_stats):
+def test_get_align_type_counts(cigar_string, nm_tag, expected_align_stats):
     mock_alignment = pysam.AlignedSegment()
     mock_alignment.cigarstring = cigar_string
     mock_alignment.set_tag("NM", nm_tag)
 
-    got_align_stats = emu.get_align_stats(mock_alignment)
+    got_align_stats = emu.get_align_type_counts(mock_alignment)
 
     assert got_align_stats == expected_align_stats
