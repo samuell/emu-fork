@@ -526,16 +526,27 @@ def generate_alignments(
 
     Parameters
     ----------
-    in_file_list: list of str
-        list of path(s) to input sequences
-    out_basename:
-        path and basename for output files
-    database:
+    in_file_list : list of str
+        List of path(s) to input sequences
+    out_basename : str
+        Path and basename for output files
+    database : str
+        Folder where the database is located
+    mm2_preset : str
+        Minimap2 preset (default: map-ont). See minimap2 docs for options.
+    num_threads : int
+        Number of threads
+    max_sec_alignments: str
+        The -N flag to minimap2: "retain at most INT secondary alignments"
+    minibatch_size: str
+        The -K flag to minimap2: "minibatch size for mapping"
+    mm2_fwd_only: bool
+        minimap2 option "-u f" to only match on the forward (transcript) strand
 
     Returns
     -------
     output_file : str
-        path to output file in SAM format (.sam)
+        Path to output file in SAM format (.sam)
     """
 
     if is_sam_file(in_file_list[0]):
