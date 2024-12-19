@@ -48,6 +48,7 @@ CIGAR_OP_MATCH = 0
 CIGAR_OP_INSERTION = 1
 CIGAR_OP_DELETION = 2
 CIGAR_OP_SOFTCLIP = 4
+CIGAR_OP_MISMATCH = 8
 CIGAR_NMTAG = 10
 
 CIGAR_OPS = [CIGAR_OP_INSERTION, CIGAR_OP_DELETION, CIGAR_OP_SOFTCLIP, CIGAR_NMTAG]
@@ -102,12 +103,29 @@ def get_align_stats(alignment):
     """
     Retrieve list of inquired cigar stats (I,D,S,X) for alignment
 
-    alignment (pysam.AlignmentFile): align of interest
-    return (list(int)): list of counts for each cigar operation defined in (I,D,S,X)
+    Parameters
+    ----------
+    alignment : pysam.AlignmentFile
+        Alignment of interest
+
+    Returns
+    -------
+    list of int
+        List of counts for each cigar operation defined in (I,D,S,X)
     """
     cigar_stats = alignment.get_cigar_stats()[0]
-    n_mismatch = cigar_stats[10] - cigar_stats[1] - cigar_stats[2]
-    return [cigar_stats[1], cigar_stats[2], cigar_stats[4], n_mismatch]
+    n_mismatch = (
+        cigar_stats[CIGAR_NMTAG]
+        - cigar_stats[CIGAR_OP_INSERTION]
+        - cigar_stats[CIGAR_OP_DELETION]
+    )
+    alignment_stats = [
+        cigar_stats[CIGAR_OP_INSERTION],
+        cigar_stats[CIGAR_OP_DELETION],
+        cigar_stats[CIGAR_OP_SOFTCLIP],
+        n_mismatch,
+    ]
+    return alignment_stats
 
 
 def get_align_len(alignment):
@@ -178,7 +196,7 @@ def get_cigar_op_log_probabilities(sam_path, cigar_ops):
     dict_longest_align : dict of str to int
         Max alignment lengths for each query read
     """
-    cigar_stats_primary = [0] * len(cigar_ops)
+    align_type_tallies = [0] * len(cigar_ops)
     dict_longest_align = {}
 
     # pylint: disable=maybe-no-member
@@ -195,21 +213,21 @@ def get_cigar_op_log_probabilities(sam_path, cigar_ops):
             and not alignment.is_supplementary
             and alignment.reference_name
         ):
-            cigar_stats_primary = list(
-                map(add, cigar_stats_primary, get_align_stats(alignment))
-            )
-            # calculate cigar stats for alignment
-            if dict_longest_align[alignment.query_name] < align_len:
+            if align_len > dict_longest_align[alignment.query_name]:
                 dict_longest_align[alignment.query_name] = align_len
+            # tally up the cigar stats
+            align_type_tallies = list(
+                map(add, align_type_tallies, get_align_stats(alignment))
+            )
 
     # check if any probabilities are 0, if so, remove
-    zero_locs = [i for i, e in enumerate(cigar_stats_primary) if e == 0]
+    zero_locs = [i for i, e in enumerate(align_type_tallies) if e == 0]
     if zero_locs:
         for i in sorted(zero_locs, reverse=True):
-            del cigar_stats_primary[i]
+            del align_type_tallies[i]
 
-    n_char = sum(cigar_stats_primary)
-    log_probs = [math.log(x) for x in np.array(cigar_stats_primary) / n_char]
+    n_char = sum(align_type_tallies)
+    log_probs = [math.log(x) for x in np.array(align_type_tallies) / n_char]
 
     return (
         log_probs,
