@@ -26,7 +26,6 @@ from Bio.SeqRecord import SeqRecord
 
 # static global variables
 CIGAR_OPS = [1, 2, 4, 10]
-CIGAR_OPS_ALL = [0, 1, 2, 4]
 TAXONOMY_RANKS = [
     "species",
     "genus",
@@ -86,9 +85,17 @@ def get_align_len(alignment):
     """
     Retrieve number of columns in alignment
 
-    alignment (pysam.AlignmentFile): align of interest
-    return (int): number of columns in alignment
+    Parameters
+    ----------
+    alignment : pysam.AlignmentFile
+        Alignment of interest
+
+    Returns
+    -------
+    int
+        Number of columns in alignment
     """
+    CIGAR_OPS_ALL = [0, 1, 2, 4]
     return sum(alignment.get_cigar_stats()[0][cigar_op] for cigar_op in CIGAR_OPS_ALL)
 
 
@@ -114,9 +121,9 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
         SeqIO.write(filtered_sequences, out_seq_file, input_type)
 
 
-def get_cigar_op_log_probabilities(sam_path):
+def get_cigar_op_log_probabilities(sam_path, cigar_ops):
     """
-    Calculate P(align_type), probability for each alignment type, in CIGAR_OPS
+    Calculate P(align_type), probability for each alignment type, in cigar_ops
     by counting how often the corresponding operations occur in the primary
     alignments and by normalizing over the total sum of operations.
 
@@ -124,27 +131,31 @@ def get_cigar_op_log_probabilities(sam_path):
     ----------
     sam_path : str
         Path to sam file of interest
+    cigar_ops : list of int
+        List of the int values for CIGAR operations that should be included the
+        calculation of alignment types
 
     Returns
     -------
     log_probs : list of float
-        log probabilities for each cigar operation in CIGAR_OPS where p > 0
+        log probabilities for each cigar operation in cigar_ops where p > 0
     zero_locs : list of int
         List of indices (int) where probability == 0
     dict_longest_align : dict of str to int
         Max alignment lengths for each query read
     """
-    cigar_stats_primary = [0] * len(CIGAR_OPS)
+    cigar_stats_primary = [0] * len(cigar_ops)
     dict_longest_align = {}
 
     # pylint: disable=maybe-no-member
-    sam_pysam = pysam.AlignmentFile(sam_path)
+    alignments_file = pysam.AlignmentFile(sam_path)
 
     # add alignment lengths and adjust existing alignment lengths in dict if necessary
-    for alignment in sam_pysam.fetch():
+    for alignment in alignments_file.fetch():
         align_len = get_align_len(alignment)
         if alignment.query_name not in dict_longest_align:
             dict_longest_align[alignment.query_name] = align_len
+
         if (
             not alignment.is_secondary
             and not alignment.is_supplementary
@@ -1105,7 +1116,7 @@ if __name__ == "__main__":
             log_prob_cigar_op,
             locs_p_cigar_zero,
             longest_align_dict,
-        ) = get_cigar_op_log_probabilities(alignment_file)
+        ) = get_cigar_op_log_probabilities(alignment_file, CIGAR_OPS)
 
         (log_prob_rgs, set_unmapped, set_mapped) = log_prob_rgs_dict(
             alignment_file, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero
