@@ -191,12 +191,12 @@ def get_misalign_type_log_probabilities(sam_path):
         log probabilities for each cigar operation in cigar_ops where p > 0
     zero_locs : list of int
         List of indices (int) where probability == 0
-    dict_longest_align : dict of str to int
+    longest_alignments : dict of str to int
         Max alignment lengths for each query read
     """
     # For storing counts of I, D, S, X : insertions, deletions, soft-clips and mis-matches
     misalign_type_counts = [0, 0, 0, 0]
-    dict_longest_align = {}
+    longest_alignments = {}
 
     # pylint: disable=maybe-no-member
     alignments_file = pysam.AlignmentFile(sam_path)
@@ -204,16 +204,16 @@ def get_misalign_type_log_probabilities(sam_path):
     # Add alignment lengths and adjust existing alignment lengths in dict if necessary
     for alignment in alignments_file.fetch():
         align_len = get_align_len(alignment)
-        if alignment.query_name not in dict_longest_align:
-            dict_longest_align[alignment.query_name] = align_len
+        if alignment.query_name not in longest_alignments:
+            longest_alignments[alignment.query_name] = align_len
 
         if (
             not alignment.is_secondary
             and not alignment.is_supplementary
             and alignment.reference_name
         ):
-            if align_len > dict_longest_align[alignment.query_name]:
-                dict_longest_align[alignment.query_name] = align_len
+            if align_len > longest_alignments[alignment.query_name]:
+                longest_alignments[alignment.query_name] = align_len
             # tally up the cigar stats
             misalign_type_counts = list(
                 map(add, misalign_type_counts, get_misalign_type_counts(alignment))
@@ -235,12 +235,12 @@ def get_misalign_type_log_probabilities(sam_path):
     return (
         misalign_type_log_probs,
         zero_locs,
-        dict_longest_align,
+        longest_alignments,
     )
 
 
 def compute_log_prob_rgs(
-    alignment, cigar_stats, log_p_cigar_op, dict_longest_align, align_len
+    alignment, cigar_stats, log_p_cigar_op, longest_alignments, align_len
 ):
     """
     log(L(r|s)) = log(P(cigar_op)) × n_cigar_op for CIGAR_OPS
@@ -249,7 +249,7 @@ def compute_log_prob_rgs(
     cigar_stats(list(int)): list of cigar stats to compute
     log_p_cigar_op(list(float)): list of cigar_op probabilities corresponding to cigar_stats;
                                     computed from primary alignments
-    dict_longest_align (dict[str]:(int)): dict of max alignment length for each query read
+    longest_alignments (dict[str]:(int)): dict of max alignment length for each query read
     align_len (int): number of columns in the alignment
     return: log_score (float): log(L(r|s))
             query_name (str): query name in alignment
@@ -258,14 +258,14 @@ def compute_log_prob_rgs(
 
     ref_name, query_name = alignment.reference_name, alignment.query_name
     log_score = sum(list(map(mul, log_p_cigar_op, cigar_stats))) * (
-        dict_longest_align[query_name] / align_len
+        longest_alignments[query_name] / align_len
     )
     species_tid = int(ref_name.split(":")[0])
     return log_score, query_name, species_tid
 
 
 def log_prob_rgs_dict(
-    sam_path, log_p_cigar_op, dict_longest_align, p_cigar_op_zero_locs=None
+    sam_path, log_p_cigar_op, longest_alignments, p_cigar_op_zero_locs=None
 ):
     """
     dict containing log(L(read|seq)) for all pairwise alignments in sam file
@@ -273,7 +273,7 @@ def log_prob_rgs_dict(
     sam_path(str): path to sam file
     log_p_cigar_op(list(float)): probability for each cigar operation defined in CIGAR_OPS,
                                      where p > 0
-    dict_longest_align (dict[str]:(int)): dict of max alignment length for each query read
+    longest_alignments (dict[str]:(int)): dict of max alignment length for each query read
     zero_locs(list(int)): list of indices (int) where probability == 0
     return ({[str,int]:float}): dict[(query_name,ref_tax_id)]=log(L(query_name|ref_tax_id))
         int: unmapped read count
@@ -293,7 +293,7 @@ def log_prob_rgs_dict(
                     alignment,
                     cigar_stats,
                     log_p_cigar_op,
-                    dict_longest_align,
+                    longest_alignments,
                     align_len,
                 )
 
@@ -324,7 +324,7 @@ def log_prob_rgs_dict(
                         alignment,
                         cigar_stats,
                         log_p_cigar_op,
-                        dict_longest_align,
+                        longest_alignments,
                         align_len,
                     )
 
