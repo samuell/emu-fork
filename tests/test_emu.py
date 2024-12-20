@@ -197,6 +197,10 @@ def test_get_misalign_type_log_probs():
     assert longest_alignments["Streptococcus_sobrinus_r1"] == 1360
 
 
+def test_log_probs_or_reads_given_seqs():
+    pass
+
+
 SAM_EXAMPLE_CONTENT = """@SQ	SN:2420510:emu_db:1	LN:1451
 @SQ	SN:1933220:emu_db:46868	LN:1537
 @SQ	SN:141349:emu_db:16952	LN:1452
