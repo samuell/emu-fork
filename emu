@@ -174,11 +174,11 @@ def output_sequences(in_path, seq_output_path, input_type, keep_ids):
         SeqIO.write(filtered_sequences, out_seq_file, input_type)
 
 
-def get_misalign_type_log_probabilities(sam_path):
+def get_misalign_type_log_probs(sam_path):
     """
-    Calculate P(align_type), probability for each alignment type, in cigar_ops
-    by counting how often the corresponding operations occur in the primary
-    alignments and by normalizing over the total sum of operations.
+    Calculate P(align_type), probability for each mis-alignment type, in
+    cigar_ops by counting how often the corresponding operations occur in the
+    primary alignments and by normalizing over the total sum of operations.
 
     Parameters
     ----------
@@ -282,16 +282,16 @@ def log_prob_rgs_dict(
     # calculate log(L(read|seq)) for all alignments
     log_p_rgs, unmapped_set = {}, set()
     # pylint: disable=maybe-no-member
-    sam_filename = pysam.AlignmentFile(sam_path, "rb")
+    sam_file = pysam.AlignmentFile(sam_path, "rb")
 
     if not p_cigar_op_zero_locs:
-        for alignment in sam_filename.fetch():
+        for alignment in sam_file.fetch():
             align_len = get_align_len(alignment)
             if alignment.reference_name and align_len:
-                cigar_stats = get_misalign_type_counts(alignment)
+                misalign_type_counts = get_misalign_type_counts(alignment)
                 log_score, query_name, species_tid = compute_log_prob_rgs(
                     alignment,
-                    cigar_stats,
+                    misalign_type_counts,
                     log_p_cigar_op,
                     longest_alignments,
                     align_len,
@@ -313,16 +313,16 @@ def log_prob_rgs_dict(
             else:
                 unmapped_set.add(alignment.query_name)
     else:
-        for alignment in sam_filename.fetch():
+        for alignment in sam_file.fetch():
             align_len = get_align_len(alignment)
             if alignment.reference_name and align_len:
-                cigar_stats = get_misalign_type_counts(alignment)
-                if sum(cigar_stats[x] for x in p_cigar_op_zero_locs) == 0:
+                misalign_type_counts = get_misalign_type_counts(alignment)
+                if sum(misalign_type_counts[x] for x in p_cigar_op_zero_locs) == 0:
                     for i in sorted(p_cigar_op_zero_locs, reverse=True):
-                        del cigar_stats[i]
+                        del misalign_type_counts[i]
                     log_score, query_name, species_tid = compute_log_prob_rgs(
                         alignment,
-                        cigar_stats,
+                        misalign_type_counts,
                         log_p_cigar_op,
                         longest_alignments,
                         align_len,
@@ -1171,7 +1171,7 @@ if __name__ == "__main__":
             log_prob_cigar_op,
             locs_p_cigar_zero,
             longest_align_dict,
-        ) = get_misalign_type_log_probabilities(alignment_file)
+        ) = get_misalign_type_log_probs(alignment_file)
 
         (log_prob_rgs, set_unmapped, set_mapped) = log_prob_rgs_dict(
             alignment_file, log_prob_cigar_op, longest_align_dict, locs_p_cigar_zero

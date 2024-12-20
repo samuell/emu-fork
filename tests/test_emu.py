@@ -172,6 +172,31 @@ def test_get_misalign_type_counts(cigar_string, nm_tag, expected_align_stats):
     assert got_align_stats == expected_align_stats
 
 
+def test_get_misalign_type_log_probs():
+    with tempfile.NamedTemporaryFile(suffix=".sam") as samfile:
+        samfile.write(bytearray(SAM_EXAMPLE_CONTENT, "utf-8"))
+        samfile.flush()
+
+        (
+            misalign_type_log_probs,
+            zero_locs,
+            longest_alignments,
+        ) = emu.get_misalign_type_log_probs(samfile.name)
+
+    assert len(misalign_type_log_probs) + len(zero_locs) == 4
+
+    for logprob in misalign_type_log_probs:
+        assert -1 < logprob < 0
+
+    assert "Sphingobacterium_puteal_r1" in longest_alignments
+    assert "Mycobacterium_saskatchewanense_r1" in longest_alignments
+    assert "Streptococcus_sobrinus_r1" in longest_alignments
+
+    assert longest_alignments["Sphingobacterium_puteal_r1"] == 1248
+    assert longest_alignments["Mycobacterium_saskatchewanense_r1"] == 1172
+    assert longest_alignments["Streptococcus_sobrinus_r1"] == 1360
+
+
 SAM_EXAMPLE_CONTENT = """@SQ	SN:2420510:emu_db:1	LN:1451
 @SQ	SN:1933220:emu_db:46868	LN:1537
 @SQ	SN:141349:emu_db:16952	LN:1452
@@ -188,28 +213,3 @@ Streptococcus_sobrinus_r1	0	1310:emu_db:16914	81	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2
 Streptococcus_sobrinus_r1	256	1310:emu_db:9243	66	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2720	AS:i:2720	nn:i:0	tp:A:S	cm:i:208	s1:i:1179	de:f:0	rl:i:373
 Streptococcus_sobrinus_r1	272	1310:emu_db:29451	113	0	1360M	*	0	0	*	*	NM:i:3	ms:i:2564	AS:i:2702	nn:i:0	tp:A:S	cm:i:202	s1:i:1162	de:f:0.0022	rl:i:373
 """
-
-
-def test_get_misalign_type_log_probabilities():
-    with tempfile.NamedTemporaryFile(suffix=".sam") as samfile:
-        samfile.write(bytearray(SAM_EXAMPLE_CONTENT, "utf-8"))
-        samfile.flush()
-
-        (
-            misalign_type_log_probs,
-            zero_locs,
-            longest_alignments,
-        ) = emu.get_misalign_type_log_probabilities(samfile.name)
-
-    assert len(misalign_type_log_probs) + len(zero_locs) == 4
-
-    for logprob in misalign_type_log_probs:
-        assert -1 < logprob < 0
-
-    assert "Sphingobacterium_puteal_r1" in longest_alignments
-    assert "Mycobacterium_saskatchewanense_r1" in longest_alignments
-    assert "Streptococcus_sobrinus_r1" in longest_alignments
-
-    assert longest_alignments["Sphingobacterium_puteal_r1"] == 1248
-    assert longest_alignments["Mycobacterium_saskatchewanense_r1"] == 1172
-    assert longest_alignments["Streptococcus_sobrinus_r1"] == 1360
