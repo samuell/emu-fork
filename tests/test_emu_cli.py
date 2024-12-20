@@ -8,7 +8,7 @@ import pandas as pd
     "emu_command, abundance_file, expected_abundancies",
     [
         (
-            "./emu abundance --db emu_database --output-dir test_results example/full_length.fa",
+            "./emu abundance --db emu_database --output-dir test_results --keep-files example/full_length.fa",
             "test_results/full_length_rel-abundance.tsv",
             {
                 "Sphingobacterium puteale": 0.5,
@@ -17,14 +17,14 @@ import pandas as pd
             },
         ),
         (
-            "./emu abundance --db emu_database --output-dir test_results --type sr example/short_read_f.fq",
+            "./emu abundance --db emu_database --output-dir test_results --type sr --keep-files example/short_read_f.fq",
             "test_results/short_read_f_rel-abundance.tsv",
             {
                 "Staphylococcus hominis": 1.0,
             },
         ),
         (
-            "./emu abundance --db emu_database --output-dir test_results --type sr example/short_read_f.fq example/short_read_r.fq",
+            "./emu abundance --db emu_database --output-dir test_results --type sr --keep-files example/short_read_f.fq example/short_read_r.fq",
             "test_results/short_read_f-short_read_r_rel-abundance.tsv",
             {
                 "Staphylococcus aureus": 1.0 / 3,
