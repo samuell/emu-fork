@@ -44,11 +44,12 @@ from Bio.SeqRecord import SeqRecord
 # Source:
 # https://pysam.readthedocs.io/en/latest/api.html#pysam.AlignedSegment.get_cigar_stats
 
-CIGAR_OP_MATCH = 0
+CIGAR_OP_MATCH = (
+    0  # Note: This one also includes mismatches in the older CIGAR standard
+)
 CIGAR_OP_INSERTION = 1
 CIGAR_OP_DELETION = 2
 CIGAR_OP_SOFTCLIP = 4
-CIGAR_OP_MISMATCH = 8
 CIGAR_NMTAG = 10
 
 CIGAR_OPS = [CIGAR_OP_INSERTION, CIGAR_OP_DELETION, CIGAR_OP_SOFTCLIP, CIGAR_NMTAG]
