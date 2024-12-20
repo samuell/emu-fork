@@ -153,16 +153,19 @@ def get_align_len(alignment):
 
     Returns
     -------
-    int
+    total_cols_in_alignment : int
         Number of columns in alignment
     """
     cigar_ops_all = [
-        CIGAR_OP_MATCH,
+        CIGAR_OP_MATCH,  # This one also includes mismatches in the older CIGAR standard
         CIGAR_OP_INSERTION,
         CIGAR_OP_DELETION,
         CIGAR_OP_SOFTCLIP,
     ]
-    return sum(alignment.get_cigar_stats()[0][cigar_op] for cigar_op in cigar_ops_all)
+    total_cols_in_alignment = sum(
+        alignment.get_cigar_stats()[0][cigar_op] for cigar_op in cigar_ops_all
+    )
+    return total_cols_in_alignment
 
 
 def output_sequences(in_path, seq_output_path, input_type, keep_ids):
