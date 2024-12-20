@@ -8,6 +8,25 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import emu
 
 
+def sam_example_content():
+    return """@SQ	SN:2420510:emu_db:1	LN:1451
+@SQ	SN:1933220:emu_db:46868	LN:1537
+@SQ	SN:141349:emu_db:16952	LN:1452
+@SQ	SN:185642:emu_db:18546	LN:1533
+@SQ	SN:1310:emu_db:16914	LN:1538
+@SQ	SN:1310:emu_db:9243	LN:1459
+@SQ	SN:1310:emu_db:29451	LN:1560
+@PG	ID:minimap2	PN:minimap2	VN:2.24-r1122	CL:minimap2 -ax map-ont -t 3 -N 50 -p .9 -K 500000000 -o ./results/full_length_emu_alignments.sam emu_database/species_taxid.fasta example/full_length.fa
+Sphingobacterium_puteal_r1	0	2420510:emu_db:1	84	60	1248M	*	0	0	*	*	NM:i:0	ms:i:2496	AS:i:2496	nn:i:0	tp:A:P	cm:i:210	s1:i:1191	s2:i:1073	de:f:0	rl:i:211
+Sphingobacterium_puteal_r1	256	1933220:emu_db:46868	115	0	1248M	*	0	0	*	*	NM:i:16	ms:i:1664	AS:i:2400	nn:i:0	tp:A:S	cm:i:173	s1:i:1073	de:f:0.0128	rl:i:211
+Mycobacterium_saskatchewanense_r1	0	141349:emu_db:16952	1	0	18S1154M	*	0	0	*	*	NM:i:16	ms:i:1476	AS:i:2212	nn:i:0	tp:A:S	cm:i:136	s1:i:927	de:f:0.0139	rl:i:277
+Mycobacterium_saskatchewanense_r1	256	185642:emu_db:18546	6	0	198M1D974M	*	0	0	*	*	NM:i:18	ms:i:1408	AS:i:2236	nn:i:0	tp:A:S	cm:i:142	s1:i:948	de:f:0.0153	rl:i:277
+Streptococcus_sobrinus_r1	0	1310:emu_db:16914	81	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2720	AS:i:2720	nn:i:0	tp:A:P	cm:i:208	s1:i:1179	s2:i:1179	de:f:0	rl:i:373
+Streptococcus_sobrinus_r1	256	1310:emu_db:9243	66	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2720	AS:i:2720	nn:i:0	tp:A:S	cm:i:208	s1:i:1179	de:f:0	rl:i:373
+Streptococcus_sobrinus_r1	272	1310:emu_db:29451	113	0	1360M	*	0	0	*	*	NM:i:3	ms:i:2564	AS:i:2702	nn:i:0	tp:A:S	cm:i:202	s1:i:1162	de:f:0.0022	rl:i:373
+"""
+
+
 @pytest.mark.parametrize(
     "output_dir, output_basename, input_file, expected_output_basepath",
     [
@@ -134,6 +153,54 @@ def test_generate_alignments():
     assert got_alignment_file == sam_file
 
 
+# Overarching function
+# --------------------
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        {
+            "have": {
+                "sam_example_content": sam_example_content(),
+                "log_prob_cigar_op": [1, 1, 1, 1],
+                "longest_alignments": {
+                    "Sphingobacterium_puteal_r1": 1248,
+                    "Mycobacterium_saskatchewanense_r1": 1172,
+                    "Streptococcus_sobrinus_r1": 1360,
+                },
+                "locs_p_cigar_zero": [],
+            },
+            "want": {
+                "log_p_rgs": {
+                    "Sphingobacterium_puteal_r1": ([2420510, 1933220], [0.0, 16.0]),
+                    "Mycobacterium_saskatchewanense_r1": (
+                        [141349, 185642],
+                        [34.0, 17.984654731457802],
+                    ),
+                    "Streptococcus_sobrinus_r1": ([1310], [3.0]),
+                },
+            },
+        },
+    ],
+)
+def test_log_probs_for_reads_given_seqs(test_case):
+    with tempfile.NamedTemporaryFile(suffix=".sam") as samfile:
+        samfile.write(bytearray(test_case["have"]["sam_example_content"], "utf-8"))
+        samfile.flush()
+
+        (
+            log_probs_reads_given_seqs,
+            set_unmapped,
+            set_mapped,
+        ) = emu.log_probs_for_reads_given_seqs(
+            samfile.name,
+            test_case["have"]["log_prob_cigar_op"],
+            test_case["have"]["longest_alignments"],
+            test_case["have"]["locs_p_cigar_zero"],
+        )
+
+        assert log_probs_reads_given_seqs == test_case["want"]["log_p_rgs"]
+
+
 @pytest.mark.parametrize(
     "cigar_string, expected_alignment_length",
     [
@@ -174,7 +241,7 @@ def test_get_misalign_type_counts(cigar_string, nm_tag, expected_align_stats):
 
 def test_get_misalign_type_log_probs():
     with tempfile.NamedTemporaryFile(suffix=".sam") as samfile:
-        samfile.write(bytearray(SAM_EXAMPLE_CONTENT, "utf-8"))
+        samfile.write(bytearray(sam_example_content(), "utf-8"))
         samfile.flush()
 
         (
@@ -197,19 +264,58 @@ def test_get_misalign_type_log_probs():
     assert longest_alignments["Streptococcus_sobrinus_r1"] == 1360
 
 
-SAM_EXAMPLE_CONTENT = """@SQ	SN:2420510:emu_db:1	LN:1451
-@SQ	SN:1933220:emu_db:46868	LN:1537
-@SQ	SN:141349:emu_db:16952	LN:1452
-@SQ	SN:185642:emu_db:18546	LN:1533
-@SQ	SN:1310:emu_db:16914	LN:1538
-@SQ	SN:1310:emu_db:9243	LN:1459
-@SQ	SN:1310:emu_db:29451	LN:1560
-@PG	ID:minimap2	PN:minimap2	VN:2.24-r1122	CL:minimap2 -ax map-ont -t 3 -N 50 -p .9 -K 500000000 -o ./results/full_length_emu_alignments.sam emu_database/species_taxid.fasta example/full_length.fa
-Sphingobacterium_puteal_r1	0	2420510:emu_db:1	84	60	1248M	*	0	0	*	*	NM:i:0	ms:i:2496	AS:i:2496	nn:i:0	tp:A:P	cm:i:210	s1:i:1191	s2:i:1073	de:f:0	rl:i:211
-Sphingobacterium_puteal_r1	256	1933220:emu_db:46868	115	0	1248M	*	0	0	*	*	NM:i:16	ms:i:1664	AS:i:2400	nn:i:0	tp:A:S	cm:i:173	s1:i:1073	de:f:0.0128	rl:i:211
-Mycobacterium_saskatchewanense_r1	0	141349:emu_db:16952	1	0	18S1154M	*	0	0	*	*	NM:i:16	ms:i:1476	AS:i:2212	nn:i:0	tp:A:S	cm:i:136	s1:i:927	de:f:0.0139	rl:i:277
-Mycobacterium_saskatchewanense_r1	256	185642:emu_db:18546	6	0	198M1D974M	*	0	0	*	*	NM:i:18	ms:i:1408	AS:i:2236	nn:i:0	tp:A:S	cm:i:142	s1:i:948	de:f:0.0153	rl:i:277
-Streptococcus_sobrinus_r1	0	1310:emu_db:16914	81	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2720	AS:i:2720	nn:i:0	tp:A:P	cm:i:208	s1:i:1179	s2:i:1179	de:f:0	rl:i:373
-Streptococcus_sobrinus_r1	256	1310:emu_db:9243	66	0	1360M	*	0	0	*	*	NM:i:0	ms:i:2720	AS:i:2720	nn:i:0	tp:A:S	cm:i:208	s1:i:1179	de:f:0	rl:i:373
-Streptococcus_sobrinus_r1	272	1310:emu_db:29451	113	0	1360M	*	0	0	*	*	NM:i:3	ms:i:2564	AS:i:2702	nn:i:0	tp:A:S	cm:i:202	s1:i:1162	de:f:0.0022	rl:i:373
-"""
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        {
+            "have": {
+                "reference_name": "2420510:emu_db:1",
+                "query_name": "Sphingobacterium_puteal_r1",
+                "cigar_stats": [0, 0, 0, 0],
+                "log_p_cigar_op": [1, 1, 1, 1],
+                "longest_alignments": {
+                    "Sphingobacterium_puteal_r1": 1248,
+                    "Mycobacterium_saskatchewanense_r1": 1172,
+                    "Streptococcus_sobrinus_r1": 1360,
+                },
+                "align_len": 1248,
+            },
+            "want": {
+                "log_score": 0,
+                "query_name": "Sphingobacterium_puteal_r1",
+                "species_tid": 2420510,
+            },
+        },
+        {
+            "have": {
+                "reference_name": "1234567:other_db:10",
+                "query_name": "Bacterium_species",
+                "cigar_stats": [1, 1, 1, 1],
+                "log_p_cigar_op": [1, 1, 1, 1],
+                "longest_alignments": {
+                    "Bacterium_species": 1234,
+                    "Bacterium_other_species": 2345,
+                    "Bacterium_yet_another_species": 3456,
+                },
+                "align_len": 2468,
+            },
+            "want": {
+                "log_score": 2.0,
+                "query_name": "Bacterium_species",
+                "species_tid": 1234567,
+            },
+        },
+    ],
+)
+def test_compute_log_prob_for_reads_given_seqs(test_case):
+    (log_score, query_name, species_tid) = emu.compute_log_prob_rgs(
+        test_case["have"]["reference_name"],
+        test_case["have"]["query_name"],
+        test_case["have"]["cigar_stats"],
+        test_case["have"]["log_p_cigar_op"],
+        test_case["have"]["longest_alignments"],
+        test_case["have"]["align_len"],
+    )
+    assert query_name == test_case["want"]["query_name"]
+    assert log_score == test_case["want"]["log_score"]
+    assert species_tid == test_case["want"]["species_tid"]
