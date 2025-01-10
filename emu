@@ -467,13 +467,14 @@ def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_thr
         freq, updated_log_likelihood, _ = expectation_maximization(log_p_rgs, freq)
 
         if len(freq) < 100000:
-            fig = plt.figure(figsize=(8, 8))
+            fig = plt.figure(figsize=(21, 16))
             plt.bar([df_taxonomy.loc[k].species for k in freq.keys()], [v for v in freq.values()])
             plt.title(f"Frequencies after iteration {counter}")
             plt.xlabel("Seq id")
             plt.ylabel("Frequency")
             plt.xticks(rotation=90)
             plt.subplots_adjust(bottom=0.3)
+            fig.tight_layout()
             plt.savefig(f"emu-freq-{counter:02d}.png")
 
         # check f vector sums to 1
