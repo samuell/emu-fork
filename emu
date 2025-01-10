@@ -23,6 +23,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import matplotlib.pyplot as plt
+
 
 # Static global variables
 # =======================
@@ -453,8 +455,26 @@ def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_thr
 
     # performs iterations of the expectation_maximization algorithm
     total_log_likelihood = -math.inf
+
+    df_taxonomy = pd.read_csv(
+        os.path.join(args.db, "taxonomy.tsv"),
+        sep="\t",
+        index_col="tax_id",
+        dtype=str,
+    )
+
     while True:
         freq, updated_log_likelihood, _ = expectation_maximization(log_p_rgs, freq)
+
+        if len(freq) < 100000:
+            fig = plt.figure(figsize=(8, 8))
+            plt.bar([df_taxonomy.loc[k].species for k in freq.keys()], [v for v in freq.values()])
+            plt.title(f"Frequencies after iteration {counter}")
+            plt.xlabel("Seq id")
+            plt.ylabel("Frequency")
+            plt.xticks(rotation=90)
+            plt.subplots_adjust(bottom=0.3)
+            plt.savefig(f"emu-freq-{counter:02d}.png")
 
         # check f vector sums to 1
         freq_sum = sum(freq.values())
