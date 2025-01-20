@@ -218,6 +218,16 @@ All software dependencies are listed in environment.yml. Emu v3.0.0 has been tes
 Publication: [Kristen D. Curry et al., “Emu: Species-Level Microbial Community Profiling of Full-Length 16S RRNA Oxford Nanopore Sequencing Data,” Nature Methods, June 30, 2022, 1–9, https://doi.org/10.1038/s41592-022-01520-4.](https://www.nature.com/articles/s41592-022-01520-4)
 Repository for reproduction of results in manuscript: [Emu-benchmark](https://gitlab.com/treangenlab/emu-benchmark)
 
+
+### Emu "Downstream" Analysis Reference
+
+We do not developed pipelines for downsteam analysis of Emu results, but our users have! 
+
+- [R Scripts for plot](https://villapollab.github.io/covid_biome/)
+- [Snakemake pipeline (in progess..)](https://github.com/matinnuhamunada/ONT_16S_Analysis)
+
+Let us know if you have a pipeline to share!
+
 ### Database Citations
 Please use citations below if any of the pre-contructed databases are utilized:
 
