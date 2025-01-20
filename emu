@@ -232,7 +232,7 @@ def expectation_maximization(log_p_rgs, freq):
     """One iteration of the EM algorithm. Updates the relative abundance estimation in f based on
     probabilities in log_p_rgs.
 
-    In each iteration, P(s|r), the probabilities of a read given a sequence, is calculated according
+    In each iteration, P(s|r), the probabilities of a sequence given a read, is calculated according
     to the current frequency vector. First, L(r|s) * f(s) is calculated, then a fixed multiplier, C,
     is calculated for each read. The fixed multiplier is then multiplied by L(r|s)*f(s),
     L(r|s) * f(s) * c. Then sum(L(r|s) * f(s) * c) for each sequence is calculated.
@@ -244,7 +244,7 @@ def expectation_maximization(log_p_rgs, freq):
     freq{int:float}: dict[species_tax_id]:likelihood species is present in sample
     returns: f {int:float}: dict[species_tax_id]:updated likelihood species is present in sample
     total_log_likelihood (float): log likelihood updated f is accurate
-    p_sgr {str: {int:float}}: probability of a read given the sequence
+    p_sgr {str: {int:float}}: probability of a sequence given the read
     """
 
     p_sgr_flat = {}
