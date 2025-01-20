@@ -221,7 +221,7 @@ Repository for reproduction of results in manuscript: [Emu-benchmark](https://gi
 
 ### Emu "Downstream" Analysis Reference
 
-We do not developed pipelines for downsteam analysis of Emu results, but our users have! 
+We have not developed pipelines for downsteam analysis of Emu results, but our users have! 
 
 - [R Scripts for plot](https://villapollab.github.io/covid_biome/)
 - [Snakemake pipeline (in progess..)](https://github.com/matinnuhamunada/ONT_16S_Analysis)
