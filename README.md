@@ -1,5 +1,6 @@
 ## Emu: species-level taxonomic abundance for full-length 16S reads
 
+[![Tests](https://github.com/treangenlab/emu/actions/workflows/python-tests.yml/badge.svg)](https://github.com/treangenlab/emu/actions/workflows/python-tests.yml)
 
 ### Description
 
