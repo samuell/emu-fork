@@ -124,12 +124,11 @@ def get_cigar_op_log_probabilities(sam_path):
         align_len = get_align_len(alignment)
         if alignment.query_name not in dict_longest_align:
             dict_longest_align[alignment.query_name] = align_len
+        elif dict_longest_align[alignment.query_name] < align_len:
+                dict_longest_align[alignment.query_name] = align_len
         if not alignment.is_secondary and not alignment.is_supplementary \
                 and alignment.reference_name:
             cigar_stats_primary = list(map(add, cigar_stats_primary, get_align_stats(alignment)))
-            # calculate cigar stats for alignment
-            if dict_longest_align[alignment.query_name] < align_len:
-                dict_longest_align[alignment.query_name] = align_len
     # check if any probabilities are 0, if so, remove
     zero_locs = [i for i, e in enumerate(cigar_stats_primary) if e == 0]
     if zero_locs:

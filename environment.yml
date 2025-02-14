@@ -1,8 +1,9 @@
 name: custom-emu
 
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
+  - nodefaults
 
 dependencies:
   - biopython
