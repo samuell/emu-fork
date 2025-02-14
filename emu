@@ -484,7 +484,10 @@ def get_species_tid(tid, nodes_dict):
     """
     if str(tid) not in nodes_dict.keys():
         raise ValueError("Taxid:{} not found in nodes file".format(tid))
+    start_id = tid
     while nodes_dict[str(tid)][1] not in TAXONOMY_RANKS:
+        if nodes_dict[str(tid)][1] == "no rank":
+            raise ValueError("Taxid:{} does not have an acceptable taxonomy label in lineage. Acceptable taxonomy labels: {}".format(start_id, TAXONOMY_RANKS))
         tid = nodes_dict[str(tid)][0]
     return tid
 
