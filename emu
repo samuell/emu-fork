@@ -483,7 +483,10 @@ def get_species_tid(tid, nodes_dict):
     """
     if str(tid) not in nodes_dict.keys():
         raise ValueError("Taxid:{} not found in nodes file".format(tid))
+    start_id = tid
     while nodes_dict[str(tid)][1] not in TAXONOMY_RANKS:
+        if nodes_dict[str(tid)][1] == "no rank":
+            raise ValueError("Taxid:{} does not have an acceptable taxonomy label in lineage. Acceptable taxonomy labels: {}".format(start_id, TAXONOMY_RANKS))
         tid = nodes_dict[str(tid)][0]
     return tid
 
@@ -694,7 +697,7 @@ def combine_outputs(dir_path, rank, split_files=False, count_table=False):
     return df_combined_full
 
 if __name__ == "__main__":
-    __version__ = "3.5.1"
+    __version__ = "3.5.2"
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', '-v', action='version', version='%(prog)s v' + __version__)
     subparsers = parser.add_subparsers(dest="subparser_name", help='sub-commands')
