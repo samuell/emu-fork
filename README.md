@@ -226,6 +226,7 @@ We have not developed pipelines for downsteam analysis of Emu results, but our u
 
 - [R Scripts for plot](https://villapollab.github.io/covid_biome/)
 - [Snakemake pipeline (in progess..)](https://github.com/matinnuhamunada/ONT_16S_Analysis)
+- [TRANA](https://github.com/genomic-medicine-sweden/TRANA) - a Nextflow pipeline, following nf-core guidelines, for taxonomic profiling of 16S rRNA reads
 
 Let us know if you have a pipeline to share!
 
