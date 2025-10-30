@@ -30,6 +30,7 @@ CIGAR_OPS_ALL = [0, 1, 2, 4]
 TAXONOMY_RANKS = ['species', 'genus', 'family', 'order', 'class', 'phylum', 'clade', 'superkingdom']
 RANKS_PRINTOUT = ['tax_id'] + TAXONOMY_RANKS + ['subspecies', 'species subgroup', 'species group']
 RANKS_ORDER = ['tax_id'] + TAXONOMY_RANKS[:6] + TAXONOMY_RANKS[7:]
+LOG_LIKELIHOOD_DIFF_TOLERANCE = 1e-9
 
 
 def open_maybe_gzip(path, mode="rt"):
@@ -361,7 +362,7 @@ def expectation_maximization_iterations(log_p_rgs, db_ids, lli_thresh, input_thr
         # confirm log likelihood increase
         log_likelihood_diff = updated_log_likelihood - total_log_likelihood
         total_log_likelihood = updated_log_likelihood
-        if log_likelihood_diff < 0:
+        if log_likelihood_diff < -LOG_LIKELIHOOD_DIFF_TOLERANCE:
             raise ValueError("total_log_likelihood decreased from prior iteration")
 
         # exit loop if log likelihood increase less than threshold
@@ -737,7 +738,7 @@ def combine_outputs(dir_path, rank, split_files=False, count_table=False):
     return df_combined_full
 
 if __name__ == "__main__":
-    __version__ = "3.5.3"
+    __version__ = "3.5.4"
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', '-v', action='version', version='%(prog)s v' + __version__)
     subparsers = parser.add_subparsers(dest="subparser_name", help='sub-commands')
