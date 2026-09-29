@@ -220,7 +220,7 @@ def compute_log_prob_rgs(alignment, cigar_stats, log_p_cigar_op, dict_longest_al
 
     ref_name, query_name = alignment.reference_name, alignment.query_name
     log_score = sum(list(map(mul, log_p_cigar_op, cigar_stats))) * \
-                (dict_longest_align[query_name]/align_len)
+                (align_len/dict_longest_align[query_name])
     species_tid = int(ref_name.split(":")[0])
     return log_score, query_name, species_tid
 
