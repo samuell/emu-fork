@@ -259,6 +259,10 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align,
             align_len_q = get_aligned_query_len(alignment)
             if alignment.reference_name and align_len:
 
+                ref_align_len = alignment.reference_length
+                ref_len = sam_filename.get_reference_length(alignment.reference_name)
+                align_ref_cov = ref_align_len / ref_len
+
                     # Output the PID filtering metadata
                 try:
                     nm = alignment.get_tag("NM")
@@ -269,10 +273,13 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align,
                     #debug_pid_file.write(f"{alignment.query_name}\t{alignment.reference_name}\t0\n")
                     pid = None
 
-                if args.min_align_len is not None and align_len_q < args.min_align_len:
+                if (args.min_align_len and align_len_q < args.min_align_len):
                     filtered_align_len_count += 1
                     continue
-                if args.max_align_len is not None and align_len_q > args.max_align_len:
+                if (args.max_align_len and align_len_q > args.max_align_len):
+                    filtered_align_len_count += 1
+                    continue
+                if (args.min_align_ref_cov and align_ref_cov < args.min_align_ref_cov):
                     filtered_align_len_count += 1
                     continue
 
@@ -354,8 +361,8 @@ def log_prob_rgs_dict(sam_path, log_p_cigar_op, dict_longest_align,
 
     if args.min_align_len is not None or args.max_align_len is not None:
         stdout.write(
-            f"Filtered {filtered_align_len_count} alignments outside aligned query length bounds "
-            f"(min_align_len={args.min_align_len}, max_align_len={args.max_align_len}).\n"
+            f"Filtered {filtered_align_len_count} alignments outside alignment length bounds "
+            f"(min_align_len={args.min_align_len}, max_align_len={args.max_align_len}, min_align_ref_cov={args.min_align_ref_cov}).\n"
         )
 
     # output PID filtering information
@@ -952,6 +959,9 @@ if __name__ == "__main__":
     abundance_parser.add_argument(
         '--max-align-len', type=int, default=2000,
         help='Maximum aligned query length (excludes soft/hard clipping) [2000]')
+    abundance_parser.add_argument(
+        '--min-align-ref-cov', type=float, default=0.0,
+        help='Minimum fraction of the reference sequence to be covered. Setting this to a higher value can avoid spurios hits on subsets of the reference [0.0]')
 
     build_db_parser = subparsers.add_parser("build-database",
                                             help="Build custom Emu database")
